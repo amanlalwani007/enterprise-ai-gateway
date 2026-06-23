@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str | None = None
     ANTHROPIC_API_KEY: str | None = None
     EMBEDDING_MODEL: str = "text-embedding-3-small"
+    ADMIN_API_KEY: str = "admin-secret-change-me"
 
     class Config:
         env_file = ".env"

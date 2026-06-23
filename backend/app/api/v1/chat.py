@@ -4,6 +4,7 @@ from app.db.utils import log_request_to_db
 from app.core.redis_utils import check_budget_cache, update_budget_cache, check_rate_limit
 from app.core.cache_utils import find_semantic_cache, save_to_semantic_cache
 from app.core.security import mask_pii
+from app.core.routing import router as model_router
 import hashlib
 import litellm
 import os
@@ -56,7 +57,15 @@ async def chat_completions(
         
         return {"choices": [{"message": {"content": cached_response}, "index": 0, "finish_reason": "stop"}]}
 
-    # 6. Proxy to LiteLLM
+    # 6. Model routing
+    model_name = data.get("model", "gpt-4")
+    route = model_router.resolve(model_name)
+    if route.get("provider"):
+        data["model"] = route["model"]
+        litellm.api_base = route.get("api_base")
+    del model_name
+
+    # 7. Proxy to LiteLLM
     try:
         response = await litellm.acompletion(
             **data,
