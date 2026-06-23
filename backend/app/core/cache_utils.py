@@ -4,8 +4,10 @@ from sqlalchemy import select, text
 from app.db.session import async_session
 from app.models.cache import SemanticCache
 
+from app.core.config import settings
+
 # Default embedding model
-EMBEDDING_MODEL = "text-embedding-3-small"
+EMBEDDING_MODEL = settings.EMBEDDING_MODEL or "text-embedding-3-small"
 SIMILARITY_THRESHOLD = 0.95
 
 async def get_embedding(text: str):

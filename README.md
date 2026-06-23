@@ -1,54 +1,77 @@
-# 🚀 Enterprise AI Gateway
+# Enterprise AI Gateway
 
-The **Enterprise AI Gateway** is an open-source, high-performance control plane for corporate AI usage. Built on top of **LiteLLM** and **FastAPI**, it allows organizations to centralize their AI access, restrict usage through granular credit limits, and dramatically reduce costs using **Semantic Caching**.
+> **Open-source, high-performance API gateway for corporate AI usage.** Centralize access to 100+ LLM providers, enforce budgets, slash costs with semantic caching, and protect sensitive data — all in one Docker command.
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Python](https://img.shields.io/badge/python-3.11+-blue.svg)
-![FastAPI](https://img.shields.io/badge/FastAPI-v0.109+-green.svg)
-![Next.js](https://img.shields.io/badge/Next.js-v14-black.svg)
+<div align="center">
 
-## ✨ Key Features
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.11+-blue.svg?logo=python&logoColor=white)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-00a86b.svg?logo=fastapi)](https://fastapi.tiangolo.com)
+[![Next.js](https://img.shields.io/badge/Next.js-14-000000.svg?logo=next.js)](https://nextjs.org)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-pgvector-336791.svg?logo=postgresql)](https://postgresql.org)
+[![Redis](https://img.shields.io/badge/Redis-Caching-DC382D.svg?logo=redis)](https://redis.io)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED.svg?logo=docker)](https://docker.com)
+[![PRs Welcome](https://img.shields.io/badge/PRs-Welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-*   **⚡ High-Concurrency Proxy:** Handles thousands of concurrent LLM streams using Python's `asyncio` and FastAPI.
-*   **💰 Budgeting & Credit Limits:** Allocate USD/Token budgets to Tenants, Teams, and individual Users. Support for Hard and Soft limits.
-*   **🧠 Semantic Caching:** Uses `pgvector` to identify and reuse responses for semantically identical queries, saving up to 70% in API costs.
-*   **🛡️ PII Masking:** Automatically detects and redacts sensitive data (SSNs, Emails, CCs) before it reaches the LLM provider.
-*   **🔌 Multi-Provider Support:** Integrated with LiteLLM to support 100+ providers including OpenAI, Anthropic, Gemini, Azure, and local models (Ollama).
-*   **📊 Enterprise Dashboard:** A modern Next.js dashboard for monitoring spend, cache hit rates, and team health.
+</div>
 
-## 🛠️ Tech Stack
+---
 
-*   **Backend:** FastAPI (Python), LiteLLM, SQLAlchemy (Async), Uvicorn.
-*   **Frontend:** Next.js 14, Tailwind CSS, Lucide React, Recharts.
-*   **Database:** PostgreSQL with `pgvector` & `pgvectorscale`.
-*   **Caching:** Redis (Async).
-*   **DevOps:** Docker, Docker Compose.
+## Features
 
-## 🚀 Quick Start
+| Capability | Description |
+|---|---|
+| **⚡ High-Concurrency Proxy** | Handles thousands of concurrent LLM streams via FastAPI + asyncio |
+| **💰 Budgeting & Credit Limits** | USD/Token budgets per Tenant, Team, and User with Hard/Soft limits (Redis-based) |
+| **🧠 Semantic Caching** | Reuses responses for semantically identical queries via `pgvector` — saves up to 70% on API costs |
+| **🛡️ PII Masking** | Auto-detects and redacts SSNs, Emails, Credit Cards before they reach the LLM provider |
+| **🔌 Multi-Provider Support** | Powers 100+ providers via LiteLLM: OpenAI, Anthropic, Gemini, Azure, Ollama, and more |
+| **📊 Enterprise Dashboard** | Next.js admin panel for spend analytics, cache hit rates, and team health |
+| **🔐 Rate Limiting** | Sliding-window rate limiter in Redis per API key |
 
-### 1. Prerequisites
-*   Docker & Docker Compose installed.
-*   API keys for your LLM providers (e.g., OpenAI, Anthropic).
+## Tech Stack
 
-### 2. Setup
-Clone the repository and create your environment file:
+| Layer | Technology |
+|---|---|
+| **Backend** | FastAPI (Async), LiteLLM, SQLAlchemy (Async), Uvicorn |
+| **Frontend** | Next.js 14, Tailwind CSS, Lucide React, Recharts |
+| **Database** | PostgreSQL + `pgvector` / `pgvectorscale` |
+| **Cache** | Redis (Async) |
+| **Infra** | Docker, Docker Compose |
+
+## Quick Start
+
+### Prerequisites
+
+- Docker & Docker Compose installed
+- API key(s) for your LLM provider(s)
+
+### Setup
+
 ```bash
+# Clone
+git clone https://github.com/amanlalwani007/enterprise-ai-gateway.git
+cd enterprise-ai-gateway
+
+# Configure
 cp .env.example .env
-```
-Edit `.env` and add your `OPENAI_API_KEY` or other provider keys.
+# Edit .env and add your OPENAI_API_KEY (or other provider keys)
 
-### 3. Run with Docker
-```bash
+# Launch everything
 docker-compose up --build
 ```
 
-The services will be available at:
-*   **Dashboard:** [http://localhost:3000](http://localhost:3000)
-*   **API Gateway:** [http://localhost:8000](http://localhost:8000)
-*   **API Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
+### Services
 
-## 📖 API Usage
-The gateway is **OpenAI-compatible**. Simply point your existing OpenAI client to the gateway URL.
+| Service | URL |
+|---|---|
+| **Dashboard** | http://localhost:3000 |
+| **API Gateway** | http://localhost:8000 |
+| **API Docs (Swagger)** | http://localhost:8000/docs |
+
+## API Usage
+
+The gateway is **OpenAI-compatible**. Point your existing OpenAI client at it:
 
 ```python
 import openai
@@ -64,13 +87,47 @@ response = client.chat.completions.create(
 )
 ```
 
-## 🏗️ Architecture
-1.  **Request** hits the FastAPI Gateway.
-2.  **Auth & Rate Limit** checks are performed against Redis.
-3.  **PII Masking** redacts sensitive data.
-4.  **Semantic Cache** check performed in Postgres (`pgvector`).
-5.  **Proxy** call made via LiteLLM if cache miss.
-6.  **Response** streamed back and cached asynchronously.
+## Architecture
 
-## 📄 License
-Distributed under the MIT License. See `LICENSE` for more information.
+```
+Request → FastAPI Gateway
+            ├── Auth & Rate Limit (Redis)
+            ├── PII Masking
+            ├── Semantic Cache Check (pgvector)
+            │     └── Hit  → Return cached response
+            │     └── Miss → Proxy via LiteLLM → Cache response
+            └── Response streamed to client
+```
+
+## Project Structure
+
+```
+enterprise-ai-gateway/
+├── backend/
+│   ├── app/
+│   │   ├── api/v1/          # API routes (chat, etc.)
+│   │   ├── core/            # Config, security, caching, redis
+│   │   ├── db/              # Database session, init, utils
+│   │   ├── models/          # SQLAlchemy models
+│   │   └── main.py          # FastAPI app entrypoint
+│   ├── Dockerfile
+│   └── requirements.txt
+├── frontend/
+│   ├── src/
+│   │   ├── app/             # Next.js App Router pages
+│   │   └── components/      # Dashboard layout, widgets
+│   ├── Dockerfile
+│   └── package.json
+├── docs/PLAN.md             # Implementation plan
+├── docker-compose.yml
+├── .env.example
+└── LICENSE
+```
+
+## Contributing
+
+Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+## License
+
+Distributed under the [MIT License](LICENSE).

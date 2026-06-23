@@ -4,6 +4,7 @@ from app.db.utils import log_request_to_db
 from app.core.redis_utils import check_budget_cache, update_budget_cache, check_rate_limit
 from app.core.cache_utils import find_semantic_cache, save_to_semantic_cache
 from app.core.security import mask_pii
+import hashlib
 import litellm
 import os
 import json
@@ -64,16 +65,26 @@ async def chat_completions(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
+    user_hash = hashlib.sha256(api_key.encode()).hexdigest()[:16]
+    
     if data.get("stream"):
         async def stream_generator():
             full_response = ""
+            prompt_tokens = 0
+            completion_tokens = 0
             async for chunk in response:
                 content = chunk.choices[0].delta.content or ""
                 full_response += content
+                if chunk.usage:
+                    prompt_tokens = chunk.usage.prompt_tokens or 0
+                    completion_tokens = chunk.usage.completion_tokens or 0
                 yield f"data: {chunk.model_dump_json()}\n\n"
             
-            background_tasks.add_task(log_request_to_db, user_id=api_key[:8], model=data.get("model"), 
-                                    prompt_tokens=0, completion_tokens=0, total_tokens=0,
+            background_tasks.add_task(update_budget_cache, api_key, 1)
+            
+            background_tasks.add_task(log_request_to_db, user_id=user_hash, model=data.get("model"), 
+                                    prompt_tokens=prompt_tokens, completion_tokens=completion_tokens, 
+                                    total_tokens=prompt_tokens + completion_tokens,
                                     request_data=data, response_data={"full_text": full_response})
             
             background_tasks.add_task(save_to_semantic_cache, prompt=prompt, response=full_response, model=data.get("model"))
@@ -87,10 +98,10 @@ async def chat_completions(
     background_tasks.add_task(save_to_semantic_cache, prompt=prompt, response=full_response, model=data.get("model"))
     
     await update_budget_cache(api_key, 1)
-    background_tasks.add_task(log_request_to_db, user_id=api_key[:8], model=data.get("model"),
-                            prompt_tokens=response.usage.prompt_tokens, 
-                            completion_tokens=response.usage.completion_tokens,
-                            total_tokens=response.usage.total_tokens,
+    background_tasks.add_task(log_request_to_db, user_id=user_hash, model=data.get("model"),
+                            prompt_tokens=response.usage.prompt_tokens if response.usage else 0, 
+                            completion_tokens=response.usage.completion_tokens if response.usage else 0,
+                            total_tokens=response.usage.total_tokens if response.usage else 0,
                             request_data=data, response_data=response.model_dump())
     
     return response

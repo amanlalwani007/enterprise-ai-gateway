@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, JSON
+from sqlalchemy import Column, Integer, Float, String, DateTime, JSON
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
 
@@ -13,7 +13,7 @@ class RequestLog(Base):
     prompt_tokens = Column(Integer)
     completion_tokens = Column(Integer)
     total_tokens = Column(Integer)
-    cost = Column(Integer)  # in micro-cents or similar
+    cost = Column(Float)  # in USD
     request_data = Column(JSON)
     response_data = Column(JSON)
     created_at = Column(DateTime, default=datetime.utcnow)

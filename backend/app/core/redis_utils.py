@@ -21,7 +21,7 @@ async def update_budget_cache(user_api_key: str, cost: float):
     """
     Atomically decrement budget in Redis.
     """
-    await redis_client.decrby(f"budget:{user_api_key}", cost)
+    await redis_client.decrbyfloat(f"budget:{user_api_key}", cost)
 
 async def check_rate_limit(user_api_key: str, limit: int = 60):
     """
