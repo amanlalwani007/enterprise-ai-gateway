@@ -1,7 +1,7 @@
 import fnmatch
 import json
-import os
 from typing import Any
+from app.core.config import settings
 
 class Route:
     def __init__(self, pattern: str, provider: str, model: str | None = None, max_budget: float | None = None, fallback: str | None = None):
@@ -15,16 +15,8 @@ class Route:
         return fnmatch.fnmatch(model_name, self.pattern)
 
 class ModelRouter:
-    def __init__(self, routes_file: str | None = None):
+    def __init__(self):
         self.routes: list[Route] = []
-        if routes_file and os.path.exists(routes_file):
-            self.load_from_file(routes_file)
-
-    def load_from_file(self, path: str):
-        with open(path) as f:
-            data = json.load(f)
-        for entry in data.get("routes", []):
-            self.routes.append(Route(**entry))
 
     def add_route(self, pattern: str, provider: str, model: str | None = None, max_budget: float | None = None, fallback: str | None = None):
         self.routes.append(Route(pattern, provider, model, max_budget, fallback))
@@ -45,11 +37,10 @@ class ModelRouter:
             resolved["max_budget"] = route.max_budget
         return resolved
 
-
 router = ModelRouter()
 
 def init_routes():
-    routes_json = os.getenv("MODEL_ROUTES")
+    routes_json = settings.MODEL_ROUTES
     if routes_json:
         data = json.loads(routes_json)
         for entry in data:
@@ -60,3 +51,5 @@ def init_routes():
         router.add_route("claude-*", "anthropic")
         router.add_route("gemini-*", "gemini")
         router.add_route("*", "openai")
+
+init_routes()

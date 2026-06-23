@@ -1,6 +1,7 @@
 import csv
 import hashlib
 import io
+import json
 import secrets
 from datetime import datetime
 from fastapi import APIRouter, HTTPException, Header, Depends, Query
@@ -134,7 +135,6 @@ async def export_logs(
             }
             for log in logs
         ]
-        import json
         return StreamingResponse(
             iter([json.dumps(data, indent=2)]),
             media_type="application/json",

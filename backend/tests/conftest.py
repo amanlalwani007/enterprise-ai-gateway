@@ -1,6 +1,23 @@
 import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
 
+@pytest.fixture(autouse=True)
+def apply_config():
+    with patch("app.core.config.settings") as mock:
+        mock.BUDGET_ENABLED = True
+        mock.DEFAULT_BUDGET = 1000.0
+        mock.DEFAULT_COST_PER_REQUEST = 0.001
+        mock.RATE_LIMIT_ENABLED = True
+        mock.RATE_LIMIT_REQUESTS = 60
+        mock.RATE_LIMIT_WINDOW_SECONDS = 60
+        mock.CACHE_ENABLED = True
+        mock.CACHE_SIMILARITY_THRESHOLD = 0.95
+        mock.PII_MASKING_ENABLED = True
+        mock.ADMIN_API_KEY = "test-admin-key"
+        mock.EMBEDDING_MODEL = "text-embedding-3-small"
+        mock.MODEL_ROUTES = None
+        yield mock
+
 @pytest.fixture
 def mock_redis():
     with patch("app.core.redis_utils.redis_client") as mock:

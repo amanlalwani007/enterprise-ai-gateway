@@ -8,10 +8,11 @@ PII_PATTERNS = {
     "PHONE": r"\b(?:\+?\d{1,3}[- ]?)?\(?\d{3}\)?[- ]?\d{3}[- ]?\d{4}\b"
 }
 
+from app.core.config import settings
+
 def mask_pii(text: str) -> str:
-    """
-    Detects and masks PII in the given text using regex patterns.
-    """
+    if not settings.PII_MASKING_ENABLED:
+        return text
     masked_text = text
     for pii_type, pattern in PII_PATTERNS.items():
         masked_text = re.sub(pattern, f"[MASKED_{pii_type}]", masked_text)

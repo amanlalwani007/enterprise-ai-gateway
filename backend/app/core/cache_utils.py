@@ -6,9 +6,8 @@ from app.models.cache import SemanticCache
 
 from app.core.config import settings
 
-# Default embedding model
-EMBEDDING_MODEL = settings.EMBEDDING_MODEL or "text-embedding-3-small"
-SIMILARITY_THRESHOLD = 0.95
+EMBEDDING_MODEL = settings.EMBEDDING_MODEL
+SIMILARITY_THRESHOLD = settings.CACHE_SIMILARITY_THRESHOLD
 
 async def get_embedding(text: str):
     """
