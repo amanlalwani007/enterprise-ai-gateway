@@ -8,7 +8,8 @@ async def log_request_to_db(
     completion_tokens: int,
     total_tokens: int,
     request_data: dict,
-    response_data: dict
+    response_data: dict,
+    cost: float = 0.0
 ):
     async with async_session() as session:
         log = RequestLog(
@@ -17,6 +18,7 @@ async def log_request_to_db(
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
             total_tokens=total_tokens,
+            cost=cost,
             request_data=request_data,
             response_data=response_data
         )

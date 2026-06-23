@@ -23,6 +23,13 @@ services:
       DATABASE_URL: postgresql+asyncpg://postgres:password@db:5432/gateway
       REDIS_URL: redis://redis:6379/0
       OPENAI_API_KEY: ${OPENAI_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ADMIN_API_KEY: ${ADMIN_API_KEY:-}
+      BUDGET_ENABLED: ${BUDGET_ENABLED:-true}
+      RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED:-false}
+      CACHE_ENABLED: ${CACHE_ENABLED:-true}
+      PII_MASKING_ENABLED: ${PII_MASKING_ENABLED:-true}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-3-small}
     depends_on:
       - db
       - redis

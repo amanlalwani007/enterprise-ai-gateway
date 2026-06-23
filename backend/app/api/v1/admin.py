@@ -14,10 +14,14 @@ from app.core.config import settings
 
 router = APIRouter()
 
+DEFAULT_ADMIN_KEY = "admin-secret-change-me"
+
 def verify_admin(authorization: str = Header(None)):
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing or invalid API Key")
     key = authorization.split(" ")[1]
+    if settings.ADMIN_API_KEY == DEFAULT_ADMIN_KEY:
+        raise HTTPException(status_code=500, detail="ADMIN_API_KEY must be changed from default before use")
     if key != settings.ADMIN_API_KEY:
         raise HTTPException(status_code=403, detail="Forbidden: admin access required")
     return key

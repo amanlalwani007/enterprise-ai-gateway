@@ -6,6 +6,9 @@ from app.core.cache_utils import find_semantic_cache, save_to_semantic_cache
 from app.core.security import mask_pii
 from app.core.routing import router as model_router
 from app.core.config import settings
+from app.db.session import async_session
+from app.models.enterprise import User
+from sqlalchemy import select
 import hashlib
 import litellm
 import json
@@ -21,7 +24,16 @@ async def chat_completions(
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing or invalid API Key")
 
-    api_key = authorization.split(" ")[1]
+    raw_api_key = authorization.split(" ")[1]
+    api_key_hash = hashlib.sha256(raw_api_key.encode()).hexdigest()
+
+    async with async_session() as session:
+        result = await session.execute(select(User).where(User.api_key == api_key_hash, User.is_active == True))
+        user = result.scalar_one_or_none()
+        if not user:
+            raise HTTPException(status_code=401, detail="Invalid or revoked API Key")
+
+    api_key = raw_api_key
 
     # Optional rate limiting
     if settings.RATE_LIMIT_ENABLED:
@@ -43,7 +55,10 @@ async def chat_completions(
             if message.get("content"):
                 message["content"] = mask_pii(message["content"])
 
-    prompt = data.get("messages", [])[-1].get("content", "")
+    messages = data.get("messages", [])
+    if not messages:
+        raise HTTPException(status_code=400, detail="At least one message is required")
+    prompt = messages[-1].get("content", "")
 
     # Optional semantic cache check
     if settings.CACHE_ENABLED:
@@ -62,7 +77,7 @@ async def chat_completions(
     # Model routing
     model_name = data.get("model", "gpt-4")
     route = model_router.resolve(model_name)
-    if route.get("provider"):
+    if route.get("provider") and route.get("model"):
         data["model"] = route["model"]
 
     # Proxy to LiteLLM
@@ -94,7 +109,7 @@ async def chat_completions(
 
             background_tasks.add_task(log_request_to_db, user_id=user_hash, model=data.get("model"),
                                     prompt_tokens=prompt_tokens, completion_tokens=completion_tokens,
-                                    total_tokens=prompt_tokens + completion_tokens,
+                                    total_tokens=prompt_tokens + completion_tokens, cost=cost,
                                     request_data=data, response_data={"full_text": full_response})
 
             if settings.CACHE_ENABLED:
@@ -107,7 +122,7 @@ async def chat_completions(
     # Non-streaming
     full_response = response.choices[0].message.content
 
-    await update_budget_cache(api_key, cost)
+    background_tasks.add_task(update_budget_cache, api_key, cost)
 
     if settings.CACHE_ENABLED:
         background_tasks.add_task(save_to_semantic_cache, prompt=prompt, response=full_response, model=data.get("model"))
@@ -115,7 +130,7 @@ async def chat_completions(
     background_tasks.add_task(log_request_to_db, user_id=user_hash, model=data.get("model"),
                             prompt_tokens=response.usage.prompt_tokens if response.usage else 0,
                             completion_tokens=response.usage.completion_tokens if response.usage else 0,
-                            total_tokens=response.usage.total_tokens if response.usage else 0,
+                            total_tokens=response.usage.total_tokens if response.usage else 0, cost=cost,
                             request_data=data, response_data=response.model_dump())
 
     return response

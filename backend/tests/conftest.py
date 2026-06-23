@@ -16,6 +16,7 @@ def apply_config():
         mock.ADMIN_API_KEY = "test-admin-key"
         mock.EMBEDDING_MODEL = "text-embedding-3-small"
         mock.MODEL_ROUTES = None
+        mock.DB_ECHO_SQL = False
         yield mock
 
 @pytest.fixture
@@ -26,6 +27,17 @@ def mock_redis():
         mock.expire = AsyncMock(return_value=True)
         mock.decrbyfloat = AsyncMock(return_value=True)
         mock.ping = AsyncMock(return_value=True)
+        yield mock
+
+@pytest.fixture
+def mock_auth_user():
+    with patch("app.api.v1.chat.async_session") as mock:
+        session = AsyncMock()
+        user = MagicMock()
+        user.is_active = True
+        session.execute.return_value.scalar_one_or_none.return_value = user
+        session.__aenter__.return_value = session
+        mock.return_value = session
         yield mock
 
 @pytest.fixture

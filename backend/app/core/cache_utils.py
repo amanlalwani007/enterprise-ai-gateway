@@ -1,9 +1,6 @@
 import litellm
-from pgvector.sqlalchemy import Vector
-from sqlalchemy import select, text
+from sqlalchemy import text
 from app.db.session import async_session
-from app.models.cache import SemanticCache
-
 from app.core.config import settings
 
 EMBEDDING_MODEL = settings.EMBEDDING_MODEL

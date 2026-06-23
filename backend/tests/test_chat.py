@@ -1,7 +1,7 @@
 import pytest
 from httpx import AsyncClient, ASGITransport
 from app.main import app
-import json
+from unittest.mock import AsyncMock, MagicMock, patch
 
 @pytest.fixture
 def client():
@@ -15,6 +15,16 @@ async def test_chat_completions_missing_api_key(client):
     assert "API Key" in response.json()["detail"]
 
 @pytest.mark.asyncio
+async def test_chat_completions_empty_messages(client, mock_auth_user, mock_redis):
+    response = await client.post(
+        "/v1/chat/completions",
+        json={"model": "gpt-4", "messages": []},
+        headers={"Authorization": "Bearer test-key"}
+    )
+    assert response.status_code == 400
+    assert "message" in response.json()["detail"]
+
+@pytest.mark.asyncio
 async def test_chat_completions_invalid_api_key(client):
     response = await client.post(
         "/v1/chat/completions",
@@ -24,7 +34,7 @@ async def test_chat_completions_invalid_api_key(client):
     assert response.status_code in (401, 402, 429, 500)
 
 @pytest.mark.asyncio
-async def test_chat_completions_rate_limit_exceeded(client, mock_redis):
+async def test_chat_completions_rate_limit_exceeded(client, mock_auth_user, mock_redis):
     mock_redis.incr.return_value = 100
     response = await client.post(
         "/v1/chat/completions",
@@ -35,7 +45,7 @@ async def test_chat_completions_rate_limit_exceeded(client, mock_redis):
     assert "Rate limit" in response.json()["detail"]
 
 @pytest.mark.asyncio
-async def test_chat_completions_budget_exceeded(client, mock_redis):
+async def test_chat_completions_budget_exceeded(client, mock_auth_user, mock_redis):
     mock_redis.get.return_value = "0"
     response = await client.post(
         "/v1/chat/completions",
@@ -47,7 +57,7 @@ async def test_chat_completions_budget_exceeded(client, mock_redis):
 
 @pytest.mark.asyncio
 async def test_chat_completions_success_non_streaming(
-    client, mock_redis, mock_litellm, mock_semantic_cache, mock_save_cache, mock_log_db
+    client, mock_auth_user, mock_redis, mock_litellm, mock_semantic_cache, mock_save_cache, mock_log_db
 ):
     response = await client.post(
         "/v1/chat/completions",
@@ -58,9 +68,8 @@ async def test_chat_completions_success_non_streaming(
 
 @pytest.mark.asyncio
 async def test_chat_completions_success_streaming(
-    client, mock_redis, mock_semantic_cache, mock_save_cache, mock_log_db
+    client, mock_auth_user, mock_redis, mock_semantic_cache, mock_save_cache, mock_log_db
 ):
-    from unittest.mock import AsyncMock, MagicMock
     async def mock_stream():
         chunk = MagicMock()
         chunk.choices = [MagicMock()]
@@ -79,8 +88,7 @@ async def test_chat_completions_success_streaming(
         final.model_dump_json.return_value = '{"choices":[{"delta":{"content":null},"finish_reason":"stop"}]}'
         yield final
 
-    with pytest.MonkeyPatch.context() as mp:
-        mp.setattr("app.api.v1.chat.litellm.acompletion", AsyncMock(return_value=mock_stream()))
+    with patch("app.api.v1.chat.litellm.acompletion", new=AsyncMock(return_value=mock_stream())):
         response = await client.post(
             "/v1/chat/completions",
             json={"model": "gpt-4", "messages": [{"role": "user", "content": "Hello"}], "stream": True},
