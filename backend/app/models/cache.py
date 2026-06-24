@@ -1,11 +1,7 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import Column, Integer, String, DateTime, Text, Float
+from sqlalchemy.dialects.postgresql import JSONB, ARRAY
 from app.models.usage import Base
 from datetime import datetime
-
-# Note: We will use a raw SQL command to add the vector column 
-# because pgvector support in SQLAlchemy requires specific extensions
-# or using the 'Vector' type from pgvector's python package.
 
 class SemanticCache(Base):
     __tablename__ = "semantic_cache"
@@ -13,7 +9,12 @@ class SemanticCache(Base):
     id = Column(Integer, primary_key=True, index=True)
     prompt_text = Column(Text, index=True)
     response_text = Column(Text)
-    model = Column(String)
-    # We will handle the 'embedding' column via raw SQL or specialized types
+    model = Column(String, index=True)
+    query_type = Column(String(32), default="factual", index=True)
+    keywords = Column(ARRAY(String), nullable=True)
+    similarity_threshold = Column(Float, default=0.95)
+    ttl_seconds = Column(Integer, default=604800)
+    hit_count = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
+    expires_at = Column(DateTime, nullable=True)
     metadata = Column(JSONB, nullable=True)

@@ -10,6 +10,7 @@ from sqlalchemy import select
 from app.db.session import async_session
 from app.models.enterprise import User
 from app.models.usage import RequestLog
+from app.core.cache_utils import get_cache_stats
 from app.core.config import settings
 
 router = APIRouter()
@@ -156,3 +157,8 @@ async def export_logs(
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=audit_logs.csv"}
     )
+
+@router.get("/cache/stats")
+async def cache_statistics(admin: str = Depends(verify_admin)):
+    stats = await get_cache_stats()
+    return {"cache_stats": stats}
