@@ -5,6 +5,7 @@ from app.models.usage import Base
 from app.models.enterprise import Tenant, Team, User
 from app.models.cache import SemanticCache
 from app.models.guardrail_log import GuardrailLog
+from app.models.feedback import Feedback
 from app.core.config import settings
 
 EMBEDDING_DIMS = {
