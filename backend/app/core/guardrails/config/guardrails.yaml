@@ -1,0 +1,25 @@
+input:
+  - class: app.core.guardrails.input.injection_detector.PromptInjectionDetector
+    params:
+      action: block
+  - class: app.core.guardrails.input.jailbreak_detector.JailbreakDetector
+    params:
+      action: block
+  - class: app.core.guardrails.input.topic_blocker.TopicBlocker
+    params:
+      action: block
+
+output:
+  - class: app.core.guardrails.output.toxicity_scorer.ToxicityScorer
+    params:
+      threshold: 0.7
+      action_block: block
+  - class: app.core.guardrails.output.refusal_detector.RefusalDetector
+    params:
+      action: log
+  - class: app.core.guardrails.output.schema_validator.SchemaValidator
+    params:
+      action: block
+  - class: app.core.guardrails.output.brand_checker.BrandChecker
+    params:
+      action: warn

@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Request, BackgroundTasks, HTTPException, Header
 from fastapi.responses import StreamingResponse
-from app.db.utils import log_request_to_db
+from app.db.utils import log_request_to_db, log_guardrail_results
 from app.core.redis_utils import check_budget_cache, update_budget_cache, check_rate_limit
 from app.core.cache_utils import find_semantic_cache, save_to_semantic_cache
 from app.core.security import mask_pii
 from app.core.routing import router as model_router
+from app.core.guardrails.registry import registry as guardrail_registry
 from app.core.config import settings
 from app.db.session import async_session
 from app.models.enterprise import User
@@ -60,6 +61,25 @@ async def chat_completions(
         raise HTTPException(status_code=400, detail="At least one message is required")
     prompt = messages[-1].get("content", "")
 
+    # Input guardrails
+    if settings.GUARDRAILS_ENABLED:
+        input_results = await guardrail_registry.run_input(prompt, {"api_key": api_key})
+        blocked = [r for r in input_results if r.action == "block"]
+        if blocked:
+            background_tasks.add_task(
+                log_guardrail_results, input_results,
+                [g.name for g in guardrail_registry.input_guardrails],
+                request_id=api_key_hash[:16], side="input"
+            )
+            detail = blocked[0].reason or "Request blocked by input guardrail"
+            raise HTTPException(status_code=403, detail=detail)
+        if any(r.action == "warn" for r in input_results):
+            background_tasks.add_task(
+                log_guardrail_results, input_results,
+                [g.name for g in guardrail_registry.input_guardrails],
+                request_id=api_key_hash[:16], side="input"
+            )
+
     # Optional semantic cache check
     if settings.CACHE_ENABLED:
         cached_response = await find_semantic_cache(prompt)
@@ -105,12 +125,39 @@ async def chat_completions(
                     completion_tokens = chunk.usage.completion_tokens or 0
                 yield f"data: {chunk.model_dump_json()}\n\n"
 
+            output_results = []
+            if settings.GUARDRAILS_ENABLED:
+                output_results = await guardrail_registry.run_output(
+                    prompt, full_response, {"api_key": api_key}
+                )
+                blocked = [r for r in output_results if r.action == "block"]
+                if blocked:
+                    background_tasks.add_task(
+                        log_guardrail_results, output_results,
+                        [g.name for g in guardrail_registry.output_guardrails],
+                        request_id=user_hash, side="output"
+                    )
+                    error_event = {
+                        "error": "output_guardrail_blocked",
+                        "detail": blocked[0].reason
+                    }
+                    yield f"data: {json.dumps(error_event)}\n\n"
+                    yield "data: [DONE]\n\n"
+                    return
+
             background_tasks.add_task(update_budget_cache, api_key, cost)
 
             background_tasks.add_task(log_request_to_db, user_id=user_hash, model=data.get("model"),
                                     prompt_tokens=prompt_tokens, completion_tokens=completion_tokens,
                                     total_tokens=prompt_tokens + completion_tokens, cost=cost,
                                     request_data=data, response_data={"full_text": full_response})
+
+            if output_results:
+                background_tasks.add_task(
+                    log_guardrail_results, output_results,
+                    [g.name for g in guardrail_registry.output_guardrails],
+                    request_id=user_hash, side="output"
+                )
 
             if settings.CACHE_ENABLED:
                 background_tasks.add_task(save_to_semantic_cache, prompt=prompt, response=full_response, model=data.get("model"))
@@ -122,7 +169,28 @@ async def chat_completions(
     # Non-streaming
     full_response = response.choices[0].message.content
 
+    output_results = []
+    if settings.GUARDRAILS_ENABLED:
+        output_results = await guardrail_registry.run_output(
+            prompt, full_response, {"api_key": api_key}
+        )
+        blocked = [r for r in output_results if r.action == "block"]
+        if blocked:
+            await log_guardrail_results(
+                output_results,
+                [g.name for g in guardrail_registry.output_guardrails],
+                request_id=user_hash, side="output"
+            )
+            raise HTTPException(status_code=403, detail=blocked[0].reason)
+
     background_tasks.add_task(update_budget_cache, api_key, cost)
+
+    if output_results:
+        background_tasks.add_task(
+            log_guardrail_results, output_results,
+            [g.name for g in guardrail_registry.output_guardrails],
+            request_id=user_hash, side="output"
+        )
 
     if settings.CACHE_ENABLED:
         background_tasks.add_task(save_to_semantic_cache, prompt=prompt, response=full_response, model=data.get("model"))

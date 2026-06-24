@@ -13,6 +13,8 @@ def apply_config():
         mock.CACHE_ENABLED = True
         mock.CACHE_SIMILARITY_THRESHOLD = 0.95
         mock.PII_MASKING_ENABLED = True
+        mock.GUARDRAILS_ENABLED = False
+        mock.GUARDRAILS_CONFIG_PATH = ""
         mock.ADMIN_API_KEY = "test-admin-key"
         mock.EMBEDDING_MODEL = "text-embedding-3-small"
         mock.MODEL_ROUTES = None

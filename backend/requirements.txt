@@ -8,6 +8,7 @@ python-dotenv
 pydantic-settings
 psycopg2-binary
 pgvector
+pyyaml
 pytest
 pytest-asyncio
 httpx

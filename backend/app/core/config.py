@@ -33,6 +33,10 @@ class Settings(BaseSettings):
     # PII Masking
     PII_MASKING_ENABLED: bool = True
 
+    # Guardrails
+    GUARDRAILS_ENABLED: bool = False
+    GUARDRAILS_CONFIG_PATH: str = ""
+
     # Model Routing
     MODEL_ROUTES: str | None = None
 
