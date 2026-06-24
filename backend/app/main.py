@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.api.v1 import chat, admin, observability, templates
+from app.api.v1 import chat, admin, observability, templates, sessions, canary
 from app.core.health import get_health_status
 from app.core.tracing import setup_tracing
 
@@ -9,6 +9,8 @@ app.include_router(chat.router, prefix="/v1/chat", tags=["chat"])
 app.include_router(admin.router, prefix="/v1/admin", tags=["admin"])
 app.include_router(observability.router, prefix="/v1/admin", tags=["observability"])
 app.include_router(templates.router, prefix="/v1/admin", tags=["templates"])
+app.include_router(sessions.router, prefix="/v1/admin", tags=["sessions"])
+app.include_router(canary.router, prefix="/v1/admin", tags=["canary"])
 
 setup_tracing()
 

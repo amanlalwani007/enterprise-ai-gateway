@@ -7,6 +7,8 @@ from app.models.cache import SemanticCache
 from app.models.guardrail_log import GuardrailLog
 from app.models.feedback import Feedback
 from app.models.template import PromptTemplate, TemplateVersion, TemplateDeployment, Experiment
+from app.models.session import Session, ToolCall, Approval
+from app.models.canary import CanaryConfig, EvalResult, RollbackEvent
 from app.core.config import settings
 
 EMBEDDING_DIMS = {
